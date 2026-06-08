@@ -1,6 +1,35 @@
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelector(sel);
 
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open('SeqD', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('k');
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+async function dbPut(key, val) {
+  const db = await openDB();
+  const tx = db.transaction('k', 'readwrite');
+  tx.objectStore('k').put(val, key);
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGet(key) {
+  const db = await openDB();
+  const tx = db.transaction('k', 'readonly');
+  const r = tx.objectStore('k').get(key);
+  return new Promise((resolve, reject) => {
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+
 class SeqDiagram {
   static CFG = {
     hdrW: 120, hdrH: 44,
@@ -22,7 +51,12 @@ class SeqDiagram {
     this.spaceDown = false;
     this.panStart = null;
     this._fileHandle = null;
+    this._initDB();
     this.init();
+  }
+
+  async _initDB() {
+    try { this._fileHandle = await dbGet('fh'); } catch (_) {}
   }
 
   init() {
@@ -373,14 +407,25 @@ class SeqDiagram {
     const data = { lifelines: this.lifelines, messages: this.messages, nextId: this.nextId };
     const json = JSON.stringify(data, null, 2);
 
+    if (this._fileHandle) {
+      try {
+        const w = await this._fileHandle.createWritable();
+        await w.write(json);
+        await w.close();
+        this.toast('Saved!');
+        return;
+      } catch (_) { this._fileHandle = null; }
+    }
+
     if (window.showSaveFilePicker) {
       try {
-        const handle = await window.showSaveFilePicker({
-          id: 'seqd',
+        const h = await window.showSaveFilePicker({
           suggestedName: 'sequence-diagram.json',
           types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
         });
-        const w = await handle.createWritable();
+        this._fileHandle = h;
+        dbPut('fh', h);
+        const w = await h.createWritable();
         await w.write(json);
         await w.close();
         this.toast('Saved!');
