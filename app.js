@@ -7,7 +7,7 @@ class SeqDiagram {
     pad: { t: 30, b: 30, l: 80, r: 80 },
     msgGap: 80,
     selfOff: 55, selfH: 30,
-    minGap: 150, minH: 400,
+    minGap: 150, maxGap: 280, minH: 400,
     reqClr: '#2563eb', respClr: '#64748b', lifeClr: '#94a3b8'
   };
 
@@ -465,10 +465,10 @@ class SeqDiagram {
   }
 
   calcLayout(cw) {
-    const { pad: p, minGap, hdrH, msgGap } = SeqDiagram.CFG;
+    const { pad: p, minGap, maxGap, hdrH, msgGap } = SeqDiagram.CFG;
     const n = this.lifelines.length;
     const avail = Math.max(300, cw - p.l - p.r);
-    const gap = Math.max(minGap, n > 1 ? avail / (n - 1) : 0);
+    const gap = Math.min(maxGap, Math.max(minGap, n > 1 ? avail / (n - 1) : 0));
     this.lifelines.forEach((l, i) => {
       this.lx.set(l.id, n > 1 ? p.l + i * gap : cw / 2);
     });
@@ -478,9 +478,9 @@ class SeqDiagram {
   }
 
   getDims() {
-    const { pad: p, hdrH, msgGap, minH, minGap } = SeqDiagram.CFG;
+    const { pad: p, hdrH, msgGap, minH, minGap, maxGap } = SeqDiagram.CFG;
     const n = this.lifelines.length;
-    const w = Math.max(600, n > 0 ? p.l + (n - 1) * minGap + p.r : 600);
+    const w = Math.max(600, n > 0 ? p.l + (n - 1) * ((minGap + maxGap) / 2) + p.r : 600);
     const h = p.t + hdrH + Math.max(1, this.messages.length + 1) * msgGap + p.b;
     return { w, h: Math.max(minH, h) };
   }
