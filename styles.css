@@ -228,8 +228,24 @@ main {
   user-select: none;
 }
 
-.message-label .msg-text {
+.message-label .msg-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.3;
+}
+
+.message-label .msg-name {
+  font-weight: 500;
   max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.message-label .msg-params {
+  font-size: 11px;
+  color: #64748b;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
 }

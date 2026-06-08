@@ -302,6 +302,7 @@ class SeqDiagram {
     });
     if (toS.options.length > 1) toS.selectedIndex = 1;
     $('message-label').value = '';
+    $('message-params').value = '';
     $('message-type').value = 'request';
     this.openModal('modal-message');
     setTimeout(() => $('message-label').focus(), 100);
@@ -319,10 +320,12 @@ class SeqDiagram {
     const fromId = $('message-from').value;
     const toId = $('message-to').value;
     const label = $('message-label').value.trim();
+    const params = $('message-params').value.trim();
     const type = $('message-type').value;
     if (!label) { this.toast('Please enter a message label.'); return; }
-    this.addMessage(fromId, toId, label, type);
+    this.addMessage(fromId, toId, label, params, type);
     $('message-label').value = '';
+    $('message-params').value = '';
     this.closeModal('modal-message');
   }
 
@@ -351,9 +354,9 @@ class SeqDiagram {
     }
   }
 
-  addMessage(fromId, toId, label, type) {
+  addMessage(fromId, toId, label, params, type) {
     const id = 'm' + this.nextId++;
-    this.messages.push({ id, fromId, toId, label, type });
+    this.messages.push({ id, fromId, toId, label, params, type });
     this.saveToStorage();
     this.render();
   }
@@ -395,10 +398,10 @@ class SeqDiagram {
       { id: 'l3', name: 'Database' }
     ];
     this.messages = [
-      { id: 'm1', fromId: 'l1', toId: 'l2', label: 'Request', type: 'request' },
-      { id: 'm2', fromId: 'l2', toId: 'l3', label: 'Query', type: 'request' },
-      { id: 'm3', fromId: 'l3', toId: 'l2', label: 'Result', type: 'response' },
-      { id: 'm4', fromId: 'l2', toId: 'l1', label: 'Response', type: 'response' }
+      { id: 'm1', fromId: 'l1', toId: 'l2', label: 'Request', params: 'userId', type: 'request' },
+      { id: 'm2', fromId: 'l2', toId: 'l3', label: 'Query', params: 'id, type', type: 'request' },
+      { id: 'm3', fromId: 'l3', toId: 'l2', label: 'Result', params: '', type: 'response' },
+      { id: 'm4', fromId: 'l2', toId: 'l1', label: 'Response', params: 'data', type: 'response' }
     ];
     this.nextId = 10;
   }
@@ -725,17 +728,29 @@ class SeqDiagram {
       let lx, ly;
       if (m.fromId === m.toId) {
         lx = fromX + selfOff / 2;
-        ly = y - 20;
+        ly = y - 22;
       } else {
         lx = (fromX + toX) / 2;
-        ly = y - 22;
+        ly = y - 24;
       }
       label.style.cssText = `left:${lx}px;top:${ly}px;transform:translateX(-50%);`;
 
-      const span = document.createElement('span');
-      span.className = 'msg-text';
-      span.textContent = m.label;
-      label.appendChild(span);
+      const inner = document.createElement('div');
+      inner.className = 'msg-inner';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'msg-name';
+      nameSpan.textContent = m.label;
+      inner.appendChild(nameSpan);
+
+      if (m.params) {
+        const paramSpan = document.createElement('span');
+        paramSpan.className = 'msg-params';
+        paramSpan.textContent = `(${m.params})`;
+        inner.appendChild(paramSpan);
+      }
+
+      label.appendChild(inner);
 
       const del = document.createElement('button');
       del.className = 'btn-del-msg';
@@ -743,6 +758,20 @@ class SeqDiagram {
       del.dataset.action = 'del-msg';
       del.dataset.id = m.id;
       label.appendChild(del);
+
+      label.title = 'Double-click to edit';
+      label.addEventListener('dblclick', () => {
+        const newLabel = prompt('Message label:', m.label);
+        if (newLabel !== null) {
+          const newParams = prompt('Parameters (optional):', m.params || '');
+          if (newParams !== null) {
+            m.label = newLabel.trim() || m.label;
+            m.params = newParams.trim() || '';
+            this.saveToStorage();
+            this.render();
+          }
+        }
+      });
 
       container.appendChild(label);
     });
