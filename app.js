@@ -16,12 +16,18 @@ class SeqDiagram {
     this.messages = [];
     this.nextId = 1;
     this.lx = new Map();
+    this.zoom = 1;
+    this.panX = 0;
+    this.panY = 0;
+    this.spaceDown = false;
+    this.panStart = null;
     this.init();
   }
 
   init() {
     this.loadFromStorage();
     this.bindEvents();
+    this.setupViewportEvents();
     this.render();
   }
 
@@ -32,6 +38,9 @@ class SeqDiagram {
     $('btn-load').onclick = () => this.load();
     $('btn-export').onclick = () => this.exportPNG();
     $('btn-clear').onclick = () => this.clear();
+    $('btn-zoom-in').onclick = () => this.adjustZoom(0.15);
+    $('btn-zoom-out').onclick = () => this.adjustZoom(-0.15);
+    $('btn-zoom-reset').onclick = () => { this.zoom = 1; this.panX = 0; this.panY = 0; this.applyTransform(); this.updateZoomLabel(); };
 
     $$('#modal-lifeline .modal-close').onclick = () => this.closeModal('modal-lifeline');
     $$('#modal-lifeline .modal-cancel').onclick = () => this.closeModal('modal-lifeline');
@@ -62,13 +71,97 @@ class SeqDiagram {
     });
   }
 
+  setupViewportEvents() {
+    const diagram = $('diagram');
+
+    diagram.addEventListener('wheel', e => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = -e.deltaY * 0.001;
+        const nz = Math.max(0.2, Math.min(5, this.zoom * (1 + delta)));
+        const rect = diagram.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        this.panX = mx - (mx - this.panX) * (nz / this.zoom);
+        this.panY = my - (my - this.panY) * (nz / this.zoom);
+        this.zoom = nz;
+        this.applyTransform();
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' && !e.repeat && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        this.spaceDown = true;
+        diagram.classList.add('diagram-space');
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      if (e.code === 'Space') {
+        this.spaceDown = false;
+        diagram.classList.remove('diagram-space', 'diagram-panning');
+        this.panStart = null;
+      }
+    });
+
+    diagram.addEventListener('mousedown', e => {
+      if (this.spaceDown && e.button === 0) {
+        e.preventDefault();
+        this.panStart = { x: e.clientX - this.panX, y: e.clientY - this.panY };
+        diagram.classList.add('diagram-panning');
+        diagram.classList.remove('diagram-space');
+      }
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (this.panStart && this.spaceDown) {
+        this.panX = e.clientX - this.panStart.x;
+        this.panY = e.clientY - this.panStart.y;
+        this.applyTransform();
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (this.panStart) {
+        this.panStart = null;
+        diagram.classList.remove('diagram-panning');
+        if (this.spaceDown) diagram.classList.add('diagram-space');
+      }
+    });
+  }
+
+  applyTransform() {
+    const vp = $('diagram').querySelector('.diagram-viewport');
+    if (vp) {
+      vp.style.transform = `translate(${this.panX}px,${this.panY}px) scale(${this.zoom})`;
+    }
+    this.updateZoomLabel();
+  }
+
+  updateZoomLabel() {
+    const el = $('zoom-label');
+    if (el) el.textContent = Math.round(this.zoom * 100) + '%';
+  }
+
+  adjustZoom(delta) {
+    const nz = Math.max(0.2, Math.min(5, this.zoom + delta));
+    const diagram = $('diagram');
+    const rect = diagram.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    this.panX = cx - (cx - this.panX) * (nz / this.zoom);
+    this.panY = cy - (cy - this.panY) * (nz / this.zoom);
+    this.zoom = nz;
+    this.applyTransform();
+  }
+
   onDiagramClick(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
-    const { action, id, dir } = btn.dataset;
+    const { action, id } = btn.dataset;
     if (action === 'del-life') this.removeLifeline(id);
     else if (action === 'del-msg') this.removeMessage(id);
-    else if (action === 'move-life') this.moveLifeline(id, dir);
     else if (action === 'rename-life') this.renameLifeline(id);
   }
 
@@ -142,18 +235,6 @@ class SeqDiagram {
       this.saveToStorage();
       this.render();
     }
-  }
-
-  moveLifeline(id, dir) {
-    const idx = this.lifelines.findIndex(l => l.id === id);
-    if (idx === -1) return;
-    if (dir === 'left' && idx > 0) {
-      [this.lifelines[idx], this.lifelines[idx - 1]] = [this.lifelines[idx - 1], this.lifelines[idx]];
-    } else if (dir === 'right' && idx < this.lifelines.length - 1) {
-      [this.lifelines[idx], this.lifelines[idx + 1]] = [this.lifelines[idx + 1], this.lifelines[idx]];
-    } else return;
-    this.saveToStorage();
-    this.render();
   }
 
   addMessage(fromId, toId, label, type) {
@@ -244,17 +325,22 @@ class SeqDiagram {
     }
     try {
       const diagram = $('diagram');
-      const origOverflow = diagram.style.overflow;
+      const sv = { z: this.zoom, x: this.panX, y: this.panY };
+      this.zoom = 1; this.panX = 0; this.panY = 0;
+      this.applyTransform();
       diagram.style.overflow = 'visible';
 
-      const canvas = await html2canvas(diagram, {
+      const vp = diagram.querySelector('.diagram-viewport');
+      const canvas = await html2canvas(vp || diagram, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         logging: false
       });
 
-      diagram.style.overflow = origOverflow;
+      diagram.style.overflow = '';
+      this.zoom = sv.z; this.panX = sv.x; this.panY = sv.y;
+      this.applyTransform();
 
       const link = document.createElement('a');
       link.download = 'sequence-diagram.png';
@@ -269,24 +355,34 @@ class SeqDiagram {
   render() {
     const container = $('diagram');
     const cw = Math.max(container.clientWidth || 800, 600);
-    container.innerHTML = '';
+
+    let vp = container.querySelector('.diagram-viewport');
+    if (!vp) {
+      container.innerHTML = '';
+      vp = document.createElement('div');
+      vp.className = 'diagram-viewport';
+      container.appendChild(vp);
+    }
+    vp.innerHTML = '';
 
     if (this.lifelines.length === 0) {
-      container.innerHTML = '<div class="placeholder">Add a lifeline to get started</div>';
+      vp.innerHTML = '<div class="placeholder">Add a lifeline to get started</div>';
       return;
     }
 
     this.calcLayout(cw);
     const dims = this.getDims();
-    container.style.cssText = `position:relative;min-width:${dims.w}px;min-height:${dims.h}px;overflow-x:auto;overflow-y:visible;`;
+    container.style.cssText = 'position:relative;overflow:hidden;';
+    vp.style.cssText = `min-width:${dims.w}px;min-height:${dims.h}px;`;
+    this.applyTransform();
 
     const svg = this.createSVG();
-    container.appendChild(svg);
+    vp.appendChild(svg);
 
     this.drawStems(svg);
     this.drawArrows(svg);
-    this.drawHeaders(container);
-    this.drawLabels(container);
+    this.drawHeaders(vp);
+    this.drawLabels(vp);
   }
 
   calcLayout(cw) {
@@ -417,7 +513,39 @@ class SeqDiagram {
       const box = document.createElement('div');
       box.className = 'header-box';
       box.textContent = l.name;
+      box.draggable = true;
+      box.dataset.id = l.id;
+      box.ondragstart = e => {
+        e.dataTransfer.setData('text/plain', l.id);
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => box.style.opacity = '0.4', 0);
+      };
+      box.ondragend = () => { box.style.opacity = '1'; };
+      box.ondragover = e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+      box.ondrop = e => {
+        e.preventDefault();
+        const fromId = e.dataTransfer.getData('text/plain');
+        const toId = l.id;
+        if (fromId && toId && fromId !== toId) {
+          const fromIdx = this.lifelines.findIndex(x => x.id === fromId);
+          const toIdx = this.lifelines.findIndex(x => x.id === toId);
+          if (fromIdx >= 0 && toIdx >= 0) {
+            const [item] = this.lifelines.splice(fromIdx, 1);
+            this.lifelines.splice(toIdx, 0, item);
+            this.saveToStorage();
+            this.render();
+          }
+        }
+      };
       div.appendChild(box);
+
+      const renameBtn = document.createElement('button');
+      renameBtn.className = 'btn-rename-life';
+      renameBtn.textContent = '\u270E';
+      renameBtn.dataset.action = 'rename-life';
+      renameBtn.dataset.id = l.id;
+      renameBtn.title = 'Rename';
+      div.appendChild(renameBtn);
 
       const del = document.createElement('button');
       del.className = 'btn-del-life';
@@ -426,26 +554,6 @@ class SeqDiagram {
       del.dataset.id = l.id;
       div.appendChild(del);
 
-      const ctrl = document.createElement('div');
-      ctrl.className = 'lifeline-controls';
-
-      const mL = document.createElement('button');
-      mL.className = 'btn-move-left';
-      mL.textContent = '\u25C0';
-      mL.dataset.action = 'move-life';
-      mL.dataset.id = l.id;
-      mL.dataset.dir = 'left';
-      ctrl.appendChild(mL);
-
-      const mR = document.createElement('button');
-      mR.className = 'btn-move-right';
-      mR.textContent = '\u25B6';
-      mR.dataset.action = 'move-life';
-      mR.dataset.id = l.id;
-      mR.dataset.dir = 'right';
-      ctrl.appendChild(mR);
-
-      div.appendChild(ctrl);
       container.appendChild(div);
     });
   }

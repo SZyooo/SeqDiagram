@@ -60,6 +60,15 @@ header h1 {
 .btn-danger { background: #dc2626; color: #fff; }
 .btn-small { padding: 4px 10px; font-size: 12px; }
 
+.zoom-label {
+  font-size: 12px;
+  color: #64748b;
+  min-width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
 main {
   background: #fff;
   border-radius: 12px;
@@ -70,8 +79,21 @@ main {
 #diagram {
   position: relative;
   min-height: 400px;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: hidden;
+  cursor: default;
+}
+
+#diagram.diagram-panning {
+  cursor: grabbing !important;
+}
+
+#diagram.diagram-space {
+  cursor: grab;
+}
+
+.diagram-viewport {
+  position: relative;
+  transform-origin: 0 0;
 }
 
 #diagram .placeholder {
@@ -109,44 +131,6 @@ main {
   box-shadow: 0 2px 12px rgba(99,102,241,0.15);
 }
 
-.lifeline-controls {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 0;
-  display: none;
-}
-
-.lifeline-header:hover .lifeline-controls { display: block; }
-
-.lifeline-controls button {
-  position: absolute;
-  top: 50%;
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  cursor: pointer;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  transform: translateY(-50%);
-  transition: all .12s;
-  line-height: 1;
-}
-
-.lifeline-controls .btn-move-left { left: -30px; }
-.lifeline-controls .btn-move-right { right: -30px; }
-
-.lifeline-controls button:hover {
-  background: #e8edf2;
-  color: #374151;
-}
-
 .lifeline-header .btn-del-life {
   position: absolute;
   top: -10px;
@@ -169,6 +153,29 @@ main {
 
 .lifeline-header:hover .btn-del-life { display: flex; }
 .lifeline-header .btn-del-life:hover { background: #dc2626; color: #fff; }
+
+.lifeline-header .btn-rename-life {
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: #e0e7ff;
+  color: #4338ca;
+  cursor: pointer;
+  font-size: 13px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  transition: all .12s;
+  line-height: 1;
+  padding: 0;
+}
+
+.lifeline-header:hover .btn-rename-life { display: flex; }
+.lifeline-header .btn-rename-life:hover { background: #4338ca; color: #fff; }
 
 .message-label {
   position: absolute;
