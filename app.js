@@ -69,6 +69,7 @@ class SeqDiagram {
     if (action === 'del-life') this.removeLifeline(id);
     else if (action === 'del-msg') this.removeMessage(id);
     else if (action === 'move-life') this.moveLifeline(id, dir);
+    else if (action === 'rename-life') this.renameLifeline(id);
   }
 
   openModal(id) { $(id).classList.add('active'); }
@@ -130,6 +131,17 @@ class SeqDiagram {
     this.messages = this.messages.filter(m => m.fromId !== id && m.toId !== id);
     this.saveToStorage();
     this.render();
+  }
+
+  renameLifeline(id) {
+    const l = this.lifelines.find(l => l.id === id);
+    if (!l) return;
+    const name = prompt('Rename lifeline:', l.name);
+    if (name && name.trim() && name.trim() !== l.name) {
+      l.name = name.trim();
+      this.saveToStorage();
+      this.render();
+    }
   }
 
   moveLifeline(id, dir) {
