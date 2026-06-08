@@ -585,22 +585,35 @@ class SeqDiagram {
       main.style.overflow = 'visible';
       diagram.style.overflow = 'visible';
 
-      const vpRect = vp.getBoundingClientRect();
+      // Tight bounding box from all actual content (exclude root SVG which spans full viewport)
+      const svgEl = vp.querySelector('svg');
       let mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity;
       vp.querySelectorAll('*').forEach(el => {
+        if (el === svgEl) return;
         const r = el.getBoundingClientRect();
         if (r.width > 0 && r.height > 0) {
           mnX = Math.min(mnX, r.left); mnY = Math.min(mnY, r.top);
           mxX = Math.max(mxX, r.right); mxY = Math.max(mxY, r.bottom);
         }
       });
-      if (!isFinite(mnX)) { mnX = vpRect.left; mnY = vpRect.top; mxX = vpRect.right; mxY = vpRect.bottom; }
+      if (!isFinite(mnX)) { mnX = vp.getBoundingClientRect().left; mnY = vp.getBoundingClientRect().top; mxX = vp.getBoundingClientRect().right; mxY = vp.getBoundingClientRect().bottom; }
+
+      const vpR = vp.getBoundingClientRect();
+      const cropPad = 1;
+      const cw = Math.ceil(mxX - mnX) + cropPad * 2;
+      const ch = Math.ceil(mxY - mnY) + cropPad * 2;
+      const cx = mnX - vpR.left - cropPad;
+      const cy = mnY - vpR.top - cropPad;
 
       const canvas = await html2canvas(vp, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
-        logging: false
+        logging: false,
+        x: Math.max(0, cx),
+        y: Math.max(0, cy),
+        width: Math.ceil(cw),
+        height: Math.ceil(ch)
       });
 
       main.style.overflow = savedOverflow.main;
@@ -608,20 +621,9 @@ class SeqDiagram {
       this.zoom = sv.z; this.panX = sv.x; this.panY = sv.y;
       this.applyTransform();
 
-      const s = 2;
-      const padPx = 1 * s;
-      const ox = Math.floor((mnX - vpRect.left) * s) - padPx;
-      const oy = Math.floor((mnY - vpRect.top) * s) - padPx;
-      const bw = Math.ceil((mxX - mnX) * s) + padPx * 2;
-      const bh = Math.ceil((mxY - mnY) * s) + padPx * 2;
-      const cropped = document.createElement('canvas');
-      cropped.width = bw; cropped.height = bh;
-      const ctx = cropped.getContext('2d');
-      ctx.drawImage(canvas, ox, oy, bw, bh, 0, 0, bw, bh);
-
       const link = document.createElement('a');
       link.download = 'sequence-diagram.png';
-      link.href = cropped.toDataURL('image/png');
+      link.href = canvas.toDataURL('image/png');
       link.click();
       this.toast('Image exported!');
     } catch (err) {
