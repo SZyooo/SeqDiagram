@@ -14,6 +14,7 @@
       <div class="toolbar-group">
         <button class="btn btn-primary" id="btn-lifeline">+ Lifeline</button>
         <button class="btn btn-primary" id="btn-message">+ Message</button>
+        <button class="btn btn-primary" id="btn-fragment">Fragment</button>
       </div>
       <div class="toolbar-group">
         <button class="btn btn-secondary" id="btn-save">Save As</button>
@@ -47,6 +48,10 @@
       <div class="form-group">
         <label for="lifeline-name">Lifeline Name</label>
         <input type="text" id="lifeline-name" placeholder="e.g. User, Server, Database" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="lifeline-attrs">Attributes (one per line)</label>
+        <textarea id="lifeline-attrs" placeholder="e.g. - id: int&#10; - name: string" rows="3" spellcheck="false"></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -92,6 +97,37 @@
     <div class="modal-footer">
       <button class="btn btn-secondary modal-cancel">Cancel</button>
       <button class="btn btn-primary" id="confirm-message">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-fragment">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Fragment</h2>
+      <span class="modal-close">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="fragment-label">Label</label>
+        <input type="text" id="fragment-label" placeholder="e.g. alt, opt, loop, par" value="alt" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="fragment-start">Start Message</label>
+        <select id="fragment-start"></select>
+      </div>
+      <div class="form-group">
+        <label for="fragment-end">End Message</label>
+        <select id="fragment-end"></select>
+      </div>
+      <div class="form-group">
+        <label for="fragment-conds">Conditions (comma-separated, optional)</label>
+        <input type="text" id="fragment-conds" placeholder="e.g. [x &gt; 0], [else]" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="confirm-fragment">Add</button>
     </div>
   </div>
 </div>

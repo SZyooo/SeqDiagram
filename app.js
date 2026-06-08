@@ -43,6 +43,7 @@ class SeqDiagram {
   constructor() {
     this.lifelines = [];
     this.messages = [];
+    this.fragments = [];
     this.nextId = 1;
     this.lx = new Map();
     this.zoom = 1;
@@ -80,6 +81,10 @@ class SeqDiagram {
     $('btn-note').onclick = () => this.toggleNote();
     $('btn-close-note').onclick = () => this.hideNote();
     $('note-text').oninput = () => { this.note = $('note-text').value; this.saveToStorage(); };
+    $('btn-fragment').onclick = () => this.openFragmentModal();
+    $$('#modal-fragment .modal-close').onclick = () => this.closeModal('modal-fragment');
+    $$('#modal-fragment .modal-cancel').onclick = () => this.closeModal('modal-fragment');
+    $('confirm-fragment').onclick = () => this.addFragmentFromModal();
 
     $$('#modal-lifeline .modal-close').onclick = () => this.closeModal('modal-lifeline');
     $$('#modal-lifeline .modal-cancel').onclick = () => this.closeModal('modal-lifeline');
@@ -289,6 +294,39 @@ class SeqDiagram {
     document.addEventListener('mouseup', onUp);
   }
 
+  openFragmentModal() {
+    if (this.messages.length < 2) { this.toast('Need at least 2 messages first.'); return; }
+    const startS = $('fragment-start');
+    const endS = $('fragment-end');
+    startS.innerHTML = ''; endS.innerHTML = '';
+    this.messages.forEach(m => {
+      const from = this.lifelines.find(l => l.id === m.fromId);
+      const to = this.lifelines.find(l => l.id === m.toId);
+      const opt = `<option value="${m.id}">${m.label}${m.params ? '('+m.params+')' : ''}</option>`;
+      startS.innerHTML += opt;
+      endS.innerHTML += opt;
+    });
+    if (endS.options.length > 1) endS.selectedIndex = endS.options.length - 1;
+    $('fragment-label').value = 'alt';
+    $('fragment-conds').value = '';
+    this.openModal('modal-fragment');
+  }
+
+  addFragmentFromModal() {
+    const label = $('fragment-label').value.trim();
+    const startMsgId = $('fragment-start').value;
+    const endMsgId = $('fragment-end').value;
+    const conds = $('fragment-conds').value.trim();
+    if (!label) { this.toast('Please enter a label.'); return; }
+    const operands = conds ? conds.split(',').map(s => ({ label: s.trim() })).filter(s => s.label) : [];
+    if (operands.length === 0) operands.push({ label: '' });
+    const id = 'f' + this.nextId++;
+    this.fragments.push({ id, label, startMsgId, endMsgId, operands });
+    this.saveToStorage();
+    this.render();
+    this.closeModal('modal-fragment');
+  }
+
   onDiagramClick(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
@@ -296,6 +334,7 @@ class SeqDiagram {
     if (action === 'del-life') this.removeLifeline(id);
     else if (action === 'del-msg') this.removeMessage(id);
     else if (action === 'rename-life') this.renameLifeline(id);
+    else if (action === 'del-frag') { this.fragments = this.fragments.filter(f => f.id !== id); this.saveToStorage(); this.render(); }
   }
 
   openModal(id) { $(id).classList.add('active'); }
@@ -330,8 +369,10 @@ class SeqDiagram {
   addLifelineFromModal() {
     const name = $('lifeline-name').value.trim();
     if (!name) { this.toast('Please enter a lifeline name.'); return; }
-    this.addLifeline(name);
+    const attrs = $('lifeline-attrs').value;
+    this.addLifeline(name, attrs);
     $('lifeline-name').value = '';
+    $('lifeline-attrs').value = '';
     this.closeModal('modal-lifeline');
   }
 
@@ -348,9 +389,9 @@ class SeqDiagram {
     this.closeModal('modal-message');
   }
 
-  addLifeline(name) {
+  addLifeline(name, attrs) {
     const id = 'l' + this.nextId++;
-    this.lifelines.push({ id, name });
+    this.lifelines.push({ id, name, attrs: attrs || '' });
     this.saveToStorage();
     this.render();
   }
@@ -365,9 +406,13 @@ class SeqDiagram {
   renameLifeline(id) {
     const l = this.lifelines.find(l => l.id === id);
     if (!l) return;
-    const name = prompt('Rename lifeline:', l.name);
-    if (name && name.trim() && name.trim() !== l.name) {
+    const name = prompt('Lifeline name:', l.name);
+    if (name === null) return;
+    const attrs = prompt('Attributes (one per line):', l.attrs || '');
+    if (attrs === null) return;
+    if (name.trim() && (name.trim() !== l.name || attrs.trim() !== l.attrs)) {
       l.name = name.trim();
+      l.attrs = attrs.trim();
       this.saveToStorage();
       this.render();
     }
@@ -390,6 +435,7 @@ class SeqDiagram {
     localStorage.setItem('seqd', JSON.stringify({
       lifelines: this.lifelines,
       messages: this.messages,
+      fragments: this.fragments,
       nextId: this.nextId,
       note: this.note
     }));
@@ -403,6 +449,7 @@ class SeqDiagram {
         if (d.lifelines && d.lifelines.length) {
           this.lifelines = d.lifelines;
           this.messages = d.messages || [];
+          this.fragments = d.fragments || [];
           this.nextId = d.nextId || 1;
           this.note = d.note || '';
           return;
@@ -428,7 +475,7 @@ class SeqDiagram {
   }
 
   async save() {
-    const data = { lifelines: this.lifelines, messages: this.messages, nextId: this.nextId };
+    const data = { lifelines: this.lifelines, messages: this.messages, fragments: this.fragments, nextId: this.nextId, note: this.note };
     const json = JSON.stringify(data, null, 2);
 
     if (this._fileHandle) {
@@ -497,6 +544,7 @@ class SeqDiagram {
       if (!d.lifelines) { this.toast('Invalid file format.'); return; }
       this.lifelines = d.lifelines;
       this.messages = d.messages || [];
+      this.fragments = d.fragments || [];
       this.nextId = d.nextId || 1;
       this.saveToStorage();
       this.render();
@@ -509,6 +557,7 @@ class SeqDiagram {
     if (!confirm('Clear all elements?')) return;
     this.lifelines = [];
     this.messages = [];
+    this.fragments = [];
     this.nextId = 1;
     localStorage.removeItem('seqd');
     this.render();
@@ -581,6 +630,7 @@ class SeqDiagram {
     vp.appendChild(svg);
 
     this.drawStems(svg);
+    this.drawFragments(svg);
     this.drawArrows(svg);
     this.drawHeaders(vp);
     this.drawLabels(vp);
@@ -703,6 +753,120 @@ class SeqDiagram {
     });
   }
 
+  drawFragments(svg) {
+    if (!this.fragments.length) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const { pad: p } = SeqDiagram.CFG;
+
+    this.fragments.forEach(f => {
+      const sm = this.messages.find(m => m.id === f.startMsgId);
+      const em = this.messages.find(m => m.id === f.endMsgId);
+      if (!sm || !em) return;
+      const si = this.messages.indexOf(sm);
+      const ei = this.messages.indexOf(em);
+      if (si < 0 || ei < 0 || si >= ei) return;
+
+      const startY = sm._y;
+      const endY = em._y;
+
+      const lids = new Set();
+      for (let i = si; i <= ei; i++) {
+        const msg = this.messages[i];
+        if (msg) { lids.add(msg.fromId); lids.add(msg.toId); }
+      }
+      let minX = Infinity, maxX = -Infinity;
+      lids.forEach(lid => {
+        const x = this.lx.get(lid);
+        if (x != null) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); }
+      });
+      if (minX === Infinity) return;
+
+      const gap = 18;
+      const boxY = startY - 36;
+      const boxH = endY - startY + 56;
+      const boxX = minX - gap;
+      const boxW = maxX - minX + gap * 2;
+
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', boxX);
+      rect.setAttribute('y', boxY);
+      rect.setAttribute('width', boxW);
+      rect.setAttribute('height', boxH);
+      rect.setAttribute('fill', 'rgba(99,102,241,0.035)');
+      rect.setAttribute('stroke', '#818cf8');
+      rect.setAttribute('stroke-width', '1.5');
+      rect.setAttribute('stroke-dasharray', '5,3');
+      rect.setAttribute('rx', '6');
+      svg.appendChild(rect);
+
+      const lw = Math.max(30, f.label.length * 8 + 18);
+      const lr = document.createElementNS(ns, 'rect');
+      lr.setAttribute('x', boxX);
+      lr.setAttribute('y', boxY);
+      lr.setAttribute('width', lw);
+      lr.setAttribute('height', '18');
+      lr.setAttribute('fill', '#818cf8');
+      lr.setAttribute('rx', '3');
+      svg.appendChild(lr);
+
+      const lt = document.createElementNS(ns, 'text');
+      lt.setAttribute('x', boxX + 9);
+      lt.setAttribute('y', boxY + 13);
+      lt.setAttribute('fill', '#fff');
+      lt.setAttribute('font-size', '10');
+      lt.setAttribute('font-weight', '600');
+      lt.textContent = f.label;
+      svg.appendChild(lt);
+
+      if (f.operands && f.operands.length > 1) {
+        const parts = f.operands.length;
+        for (let i = 1; i < parts; i++) {
+          const dy = boxY + (boxH / parts) * i;
+          const dl = document.createElementNS(ns, 'line');
+          dl.setAttribute('x1', boxX); dl.setAttribute('y1', dy);
+          dl.setAttribute('x2', boxX + boxW); dl.setAttribute('y2', dy);
+          dl.setAttribute('stroke', '#818cf8');
+          dl.setAttribute('stroke-width', '1');
+          dl.setAttribute('stroke-dasharray', '4,3');
+          svg.appendChild(dl);
+          if (f.operands[i] && f.operands[i].label) {
+            const ot = document.createElementNS(ns, 'text');
+            ot.setAttribute('x', boxX + 5);
+            ot.setAttribute('y', dy - 4);
+            ot.setAttribute('fill', '#818cf8');
+            ot.setAttribute('font-size', '9');
+            ot.setAttribute('font-style', 'italic');
+            ot.textContent = f.operands[i].label;
+            svg.appendChild(ot);
+          }
+        }
+        if (f.operands[0] && f.operands[0].label) {
+          const ot = document.createElementNS(ns, 'text');
+          ot.setAttribute('x', boxX + 5);
+          ot.setAttribute('y', boxY + (boxH / parts) - 4);
+          ot.setAttribute('fill', '#818cf8');
+          ot.setAttribute('font-size', '9');
+          ot.setAttribute('font-style', 'italic');
+          ot.textContent = f.operands[0].label;
+          svg.appendChild(ot);
+        }
+      }
+
+      const delBtn = document.createElementNS(ns, 'foreignObject');
+      delBtn.setAttribute('x', boxX + boxW - 22);
+      delBtn.setAttribute('y', boxY + 1);
+      delBtn.setAttribute('width', '20');
+      delBtn.setAttribute('height', '18');
+      const b = document.createElement('button');
+      b.className = 'frag-del';
+      b.textContent = '\u00d7';
+      b.dataset.action = 'del-frag';
+      b.dataset.id = f.id;
+      delBtn.appendChild(b);
+      svg.appendChild(delBtn);
+    });
+  }
+
   drawHeaders(container) {
     const { pad: p, hdrH } = SeqDiagram.CFG;
     this.lifelines.forEach(l => {
@@ -714,7 +878,16 @@ class SeqDiagram {
 
       const box = document.createElement('div');
       box.className = 'header-box';
-      box.textContent = l.name;
+      const nameSpan = document.createElement('div');
+      nameSpan.className = 'hdr-name';
+      nameSpan.textContent = l.name;
+      box.appendChild(nameSpan);
+      if (l.attrs) {
+        const attrDiv = document.createElement('div');
+        attrDiv.className = 'hdr-attrs';
+        attrDiv.textContent = l.attrs;
+        box.appendChild(attrDiv);
+      }
       box.addEventListener('mousedown', e => this.onHeaderMouseDown(e, l.id));
       div.appendChild(box);
 
