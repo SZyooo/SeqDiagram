@@ -51,6 +51,7 @@ class SeqDiagram {
     this.spaceDown = false;
     this.panStart = null;
     this._fileHandle = null;
+    this.note = '';
     this._initDB();
     this.init();
   }
@@ -76,6 +77,9 @@ class SeqDiagram {
     $('btn-zoom-in').onclick = () => this.adjustZoom(0.15);
     $('btn-zoom-out').onclick = () => this.adjustZoom(-0.15);
     $('btn-zoom-reset').onclick = () => { this.zoom = 1; this.panX = 0; this.panY = 0; this.applyTransform(); this.updateZoomLabel(); };
+    $('btn-note').onclick = () => this.toggleNote();
+    $('btn-close-note').onclick = () => this.hideNote();
+    $('note-text').oninput = () => { this.note = $('note-text').value; this.saveToStorage(); };
 
     $$('#modal-lifeline .modal-close').onclick = () => this.closeModal('modal-lifeline');
     $$('#modal-lifeline .modal-cancel').onclick = () => this.closeModal('modal-lifeline');
@@ -177,6 +181,21 @@ class SeqDiagram {
   updateZoomLabel() {
     const el = $('zoom-label');
     if (el) el.textContent = Math.round(this.zoom * 100) + '%';
+  }
+
+  toggleNote() {
+    const panel = $('note-panel');
+    const open = panel.classList.toggle('open');
+    $('btn-note').classList.toggle('active', open);
+    if (open) {
+      $('note-text').value = this.note;
+      setTimeout(() => $('note-text').focus(), 100);
+    }
+  }
+
+  hideNote() {
+    $('note-panel').classList.remove('open');
+    $('btn-note').classList.remove('active');
   }
 
   adjustZoom(delta) {
@@ -371,7 +390,8 @@ class SeqDiagram {
     localStorage.setItem('seqd', JSON.stringify({
       lifelines: this.lifelines,
       messages: this.messages,
-      nextId: this.nextId
+      nextId: this.nextId,
+      note: this.note
     }));
   }
 
@@ -384,6 +404,7 @@ class SeqDiagram {
           this.lifelines = d.lifelines;
           this.messages = d.messages || [];
           this.nextId = d.nextId || 1;
+          this.note = d.note || '';
           return;
         }
       }

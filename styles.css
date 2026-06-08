@@ -372,6 +372,68 @@ main {
   gap: 8px;
 }
 
+.note-panel {
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  margin: -12px 0 12px;
+  padding: 0 24px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .25s ease, padding .25s ease;
+}
+
+.note-panel.open {
+  max-height: 220px;
+  padding: 16px 24px;
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.btn-close-note {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #94a3b8;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.btn-close-note:hover { color: #475569; }
+
+#note-text {
+  width: 100%;
+  min-height: 100px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color .15s;
+  line-height: 1.5;
+}
+
+#note-text:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+}
+
+.btn.active {
+  background: #6366f1 !important;
+  color: #fff !important;
+}
+
 .toast {
   position: fixed;
   bottom: 24px;

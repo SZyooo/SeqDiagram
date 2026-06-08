@@ -27,8 +27,18 @@
         <button class="btn btn-secondary btn-small" id="btn-zoom-in">+</button>
         <button class="btn btn-secondary btn-small" id="btn-zoom-reset">Reset</button>
       </div>
+      <div class="toolbar-group">
+        <button class="btn btn-secondary" id="btn-note">Notes</button>
+      </div>
     </div>
   </header>
+  <div id="note-panel" class="note-panel">
+    <div class="note-header">
+      <span>Diagram Notes</span>
+      <button class="btn-close-note" id="btn-close-note">&times;</button>
+    </div>
+    <textarea id="note-text" placeholder="Write your notes here..." spellcheck="false"></textarea>
+  </div>
   <main>
     <div id="diagram"></div>
   </main>
