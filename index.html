@@ -32,13 +32,6 @@
       </div>
     </div>
   </header>
-  <div id="note-panel" class="note-panel">
-    <div class="note-header">
-      <span>Diagram Notes</span>
-      <button class="btn-close-note" id="btn-close-note">&times;</button>
-    </div>
-    <textarea id="note-text" placeholder="Write your notes here..." spellcheck="false"></textarea>
-  </div>
   <main>
     <div id="diagram"></div>
   </main>
@@ -100,6 +93,16 @@
       <button class="btn btn-secondary modal-cancel">Cancel</button>
       <button class="btn btn-primary" id="confirm-message">Add</button>
     </div>
+  </div>
+</div>
+
+<div id="note-sidebar" class="note-sidebar">
+  <div class="note-sidebar-header">
+    <span>Notes</span>
+    <button id="btn-close-note" class="btn-close-note">&times;</button>
+  </div>
+  <div class="note-sidebar-body">
+    <textarea id="note-text" placeholder="Write your notes here..." spellcheck="false"></textarea>
   </div>
 </div>
 

@@ -184,8 +184,8 @@ class SeqDiagram {
   }
 
   toggleNote() {
-    const panel = $('note-panel');
-    const open = panel.classList.toggle('open');
+    const sidebar = $('note-sidebar');
+    const open = sidebar.classList.toggle('open');
     $('btn-note').classList.toggle('active', open);
     if (open) {
       $('note-text').value = this.note;
@@ -194,7 +194,7 @@ class SeqDiagram {
   }
 
   hideNote() {
-    $('note-panel').classList.remove('open');
+    $('note-sidebar').classList.remove('open');
     $('btn-note').classList.remove('active');
   }
 
