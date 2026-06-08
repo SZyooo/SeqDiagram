@@ -575,38 +575,53 @@ class SeqDiagram {
     }
     try {
       const diagram = $('diagram');
+      const main = diagram.closest('main');
+      const vp = diagram.querySelector('.diagram-viewport');
       const sv = { z: this.zoom, x: this.panX, y: this.panY };
       this.zoom = 1; this.panX = 0; this.panY = 0;
       this.applyTransform();
+
+      const savedOverflow = { main: main.style.overflow, diagram: diagram.style.overflow };
+      main.style.overflow = 'visible';
       diagram.style.overflow = 'visible';
 
-      const vp = diagram.querySelector('.diagram-viewport');
-      const { pad: p } = SeqDiagram.CFG;
-      let cw = 600;
-      if (this.lifelines.length > 0) {
-        let mn = Infinity, mx = -Infinity;
-        this.lifelines.forEach(l => { const x = this.lx.get(l.id); if (x != null) { mn = Math.min(mn, x); mx = Math.max(mx, x); } });
-        if (mn !== Infinity) cw = mx - mn + p.l + p.r;
-      }
-      const savedW = vp.style.width;
-      vp.style.width = cw + 'px';
+      const vpRect = vp.getBoundingClientRect();
+      let mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity;
+      vp.querySelectorAll('*').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          mnX = Math.min(mnX, r.left); mnY = Math.min(mnY, r.top);
+          mxX = Math.max(mxX, r.right); mxY = Math.max(mxY, r.bottom);
+        }
+      });
+      if (!isFinite(mnX)) { mnX = vpRect.left; mnY = vpRect.top; mxX = vpRect.right; mxY = vpRect.bottom; }
 
-      const canvas = await html2canvas(vp || diagram, {
+      const canvas = await html2canvas(vp, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
-        logging: false,
-        width: cw
+        logging: false
       });
 
-      vp.style.width = savedW;
-      diagram.style.overflow = '';
+      main.style.overflow = savedOverflow.main;
+      diagram.style.overflow = savedOverflow.diagram;
       this.zoom = sv.z; this.panX = sv.x; this.panY = sv.y;
       this.applyTransform();
 
+      const s = 2;
+      const padPx = 1 * s;
+      const ox = Math.floor((mnX - vpRect.left) * s) - padPx;
+      const oy = Math.floor((mnY - vpRect.top) * s) - padPx;
+      const bw = Math.ceil((mxX - mnX) * s) + padPx * 2;
+      const bh = Math.ceil((mxY - mnY) * s) + padPx * 2;
+      const cropped = document.createElement('canvas');
+      cropped.width = bw; cropped.height = bh;
+      const ctx = cropped.getContext('2d');
+      ctx.drawImage(canvas, ox, oy, bw, bh, 0, 0, bw, bh);
+
       const link = document.createElement('a');
       link.download = 'sequence-diagram.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = cropped.toDataURL('image/png');
       link.click();
       this.toast('Image exported!');
     } catch (err) {
