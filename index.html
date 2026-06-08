@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequence Diagram Tool</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Sequence Diagram Tool</h1>
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="btn btn-primary" id="btn-lifeline">+ Lifeline</button>
+        <button class="btn btn-primary" id="btn-message">+ Message</button>
+      </div>
+      <div class="toolbar-group">
+        <button class="btn btn-secondary" id="btn-save">Save</button>
+        <button class="btn btn-secondary" id="btn-load">Load</button>
+        <button class="btn btn-accent" id="btn-export">Export PNG</button>
+        <button class="btn btn-danger" id="btn-clear">Clear</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div id="diagram"></div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modal-lifeline">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Lifeline</h2>
+      <span class="modal-close">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="lifeline-name">Lifeline Name</label>
+        <input type="text" id="lifeline-name" placeholder="e.g. User, Server, Database" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="confirm-lifeline">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-message">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Message</h2>
+      <span class="modal-close">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="message-from">From</label>
+          <select id="message-from"></select>
+        </div>
+        <div class="form-group">
+          <label for="message-to">To</label>
+          <select id="message-to"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="message-label">Label</label>
+        <input type="text" id="message-label" placeholder="e.g. Request, Response" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="message-type">Type</label>
+        <select id="message-type">
+          <option value="request">Request (solid arrow)</option>
+          <option value="response">Response (dashed arrow)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="confirm-message">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
