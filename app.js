@@ -630,7 +630,7 @@ class SeqDiagram {
     vp.appendChild(svg);
 
     this.drawStems(svg);
-    this.drawFragments(svg);
+    this.drawFragments(svg, vp);
     this.drawArrows(svg);
     this.drawHeaders(vp);
     this.drawLabels(vp);
@@ -753,7 +753,7 @@ class SeqDiagram {
     });
   }
 
-  drawFragments(svg) {
+  drawFragments(svg, container) {
     if (!this.fragments.length) return;
     const ns = 'http://www.w3.org/2000/svg';
     const { pad: p } = SeqDiagram.CFG;
@@ -852,18 +852,14 @@ class SeqDiagram {
         }
       }
 
-      const delBtn = document.createElementNS(ns, 'foreignObject');
-      delBtn.setAttribute('x', boxX + boxW - 22);
-      delBtn.setAttribute('y', boxY + 1);
-      delBtn.setAttribute('width', '20');
-      delBtn.setAttribute('height', '18');
-      const b = document.createElement('button');
-      b.className = 'frag-del';
-      b.textContent = '\u00d7';
-      b.dataset.action = 'del-frag';
-      b.dataset.id = f.id;
-      delBtn.appendChild(b);
-      svg.appendChild(delBtn);
+      const db = document.createElement('div');
+      db.className = 'frag-del';
+      db.textContent = '\u00d7';
+      db.dataset.action = 'del-frag';
+      db.dataset.id = f.id;
+      db.title = 'Delete fragment';
+      db.style.cssText = `position:absolute;left:${boxX + boxW - 20}px;top:${boxY + 2}px;`;
+      if (container) container.appendChild(db);
     });
   }
 

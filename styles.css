@@ -506,6 +506,7 @@ main {
 }
 
 .frag-del {
+  position: absolute;
   background: #fee2e2;
   border: none;
   border-radius: 50%;
@@ -521,9 +522,9 @@ main {
   opacity: 0;
   transition: opacity .12s;
   font-weight: 700;
+  z-index: 15;
 }
 
-foreignObject:hover .frag-del,
 .frag-del:hover { opacity: 1; }
 
 .hdr-name { font-size: 13px; font-weight: 600; color: #4338ca; line-height: 1.3; }
