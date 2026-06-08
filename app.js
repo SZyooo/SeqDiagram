@@ -158,40 +158,75 @@ class SeqDiagram {
 
   onHeaderMouseDown(e, id) {
     if (e.button !== 0 || this.spaceDown) return;
+    e.preventDefault();
+
+    const box = e.currentTarget;
+    const diagram = $('diagram');
+    const vp = diagram.querySelector('.diagram-viewport');
+    const boxRect = box.getBoundingClientRect();
+
+    const ghost = box.cloneNode(true);
+    ghost.className = 'header-box drag-ghost';
+    ghost.style.cssText = `left:${boxRect.left}px;top:${boxRect.top}px;width:${boxRect.width}px;`;
+    document.body.appendChild(ghost);
+
+    box.style.opacity = '0.3';
+
+    const indicator = document.createElement('div');
+    indicator.className = 'drag-indicator';
+    vp.appendChild(indicator);
+
+    const offsetX = e.clientX - boxRect.left;
     const startX = e.clientX;
-    let moved = false;
+    const positions = this.lifelines.filter(ll => ll.id !== id).map(ll => ({ id: ll.id, x: this.lx.get(ll.id) }));
+
+    const getInsertIdx = mx => {
+      for (let i = 0; i < positions.length; i++) {
+        if (mx < positions[i].x) return i;
+      }
+      return positions.length;
+    };
+
+    const showIndicator = mx => {
+      if (positions.length === 0) return;
+      const insIdx = getInsertIdx(mx);
+      const gap = (positions.length > 1) ? (positions[1].x - positions[0].x) : SeqDiagram.CFG.minGap;
+      const halfGap = gap / 2;
+      let ix;
+      if (insIdx === 0) ix = positions[0].x - halfGap;
+      else if (insIdx >= positions.length) ix = positions[positions.length - 1].x + halfGap;
+      else ix = (positions[insIdx - 1].x + positions[insIdx].x) / 2;
+      indicator.style.cssText = `left:${ix}px;top:${SeqDiagram.CFG.pad.t}px;bottom:${SeqDiagram.CFG.pad.b}px;`;
+    };
 
     const onMove = ev => {
-      if (!moved && (Math.abs(ev.clientX - startX) > 6)) {
-        moved = true;
-        document.body.style.cursor = 'grabbing';
-      }
+      ghost.style.left = (ev.clientX - offsetX) + 'px';
+      ghost.style.top = (ev.clientY - 36) + 'px';
+      const rect = diagram.getBoundingClientRect();
+      showIndicator((ev.clientX - rect.left - this.panX) / this.zoom);
     };
 
     const onUp = ev => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      ghost.remove();
+      box.style.opacity = '1';
+      indicator.remove();
       document.body.style.cursor = '';
 
-      if (moved) {
-        const diagram = $('diagram');
+      if (Math.abs(ev.clientX - startX) > 6) {
         const rect = diagram.getBoundingClientRect();
         const mx = (ev.clientX - rect.left - this.panX) / this.zoom;
-
-        let targetIdx = 0;
-        let minDist = Infinity;
-        this.lifelines.forEach((ll, i) => {
-          const d = Math.abs(mx - this.lx.get(ll.id));
-          if (d < minDist) { minDist = d; targetIdx = i; }
-        });
-
+        const insIdx = getInsertIdx(mx);
         const fromIdx = this.lifelines.findIndex(ll => ll.id === id);
-        if (fromIdx >= 0 && fromIdx !== targetIdx) {
-          const [item] = this.lifelines.splice(fromIdx, 1);
-          const adjust = fromIdx < targetIdx ? targetIdx - 1 : targetIdx;
-          this.lifelines.splice(adjust, 0, item);
-          this.saveToStorage();
-          this.render();
+        if (fromIdx >= 0) {
+          const adj = fromIdx < insIdx ? Math.max(0, insIdx - 1) : insIdx;
+          if (adj !== fromIdx) {
+            const [item] = this.lifelines.splice(fromIdx, 1);
+            this.lifelines.splice(adj, 0, item);
+            this.saveToStorage();
+            this.render();
+          }
         }
       }
     };

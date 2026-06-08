@@ -101,6 +101,35 @@ main {
   transform-origin: 0 0;
 }
 
+.drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0.88;
+  box-shadow: 0 8px 28px rgba(99,102,241,0.25);
+  z-index: 1000;
+  transform: rotate(1deg) scale(1.04);
+  background: #eef2ff;
+  border: 2px solid #6366f1;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #4338ca;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.drag-indicator {
+  position: absolute;
+  width: 3px;
+  background: #6366f1;
+  border-radius: 2px;
+  display: block;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(99,102,241,0.4);
+}
+
 #diagram .placeholder {
   display: flex;
   align-items: center;
