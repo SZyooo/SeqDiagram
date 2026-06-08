@@ -21,6 +21,7 @@ class SeqDiagram {
     this.panY = 0;
     this.spaceDown = false;
     this.panStart = null;
+    this._fileHandle = null;
     this.init();
   }
 
@@ -375,13 +376,14 @@ class SeqDiagram {
     if (window.showSaveFilePicker) {
       try {
         const handle = await window.showSaveFilePicker({
+          id: 'seqd',
           suggestedName: 'sequence-diagram.json',
           types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
         });
         const w = await handle.createWritable();
         await w.write(json);
         await w.close();
-        this.toast('File saved!');
+        this.toast('Saved!');
         return;
       } catch (e) { if (e.name === 'AbortError') return; }
     }
@@ -393,7 +395,7 @@ class SeqDiagram {
     a.download = 'sequence-diagram.json';
     a.click();
     URL.revokeObjectURL(url);
-    this.toast('File saved!');
+    this.toast('Saved!');
   }
 
   async load() {
@@ -401,6 +403,7 @@ class SeqDiagram {
     if (window.showOpenFilePicker) {
       try {
         const [handle] = await window.showOpenFilePicker({
+          id: 'seqd',
           types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
         });
         text = await (await handle.getFile()).text();
