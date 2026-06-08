@@ -585,7 +585,14 @@ class SeqDiagram {
       main.style.overflow = 'visible';
       diagram.style.overflow = 'visible';
 
-      // Tight bounding box from all actual content (exclude root SVG which spans full viewport)
+      const fullCanvas = await html2canvas(vp, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+
+      // Compute tight bounding box BEFORE restoring (need zoom=1 layout)
       const svgEl = vp.querySelector('svg');
       let mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity;
       vp.querySelectorAll('*').forEach(el => {
@@ -599,31 +606,27 @@ class SeqDiagram {
       if (!isFinite(mnX)) { mnX = vp.getBoundingClientRect().left; mnY = vp.getBoundingClientRect().top; mxX = vp.getBoundingClientRect().right; mxY = vp.getBoundingClientRect().bottom; }
 
       const vpR = vp.getBoundingClientRect();
-      const cropPad = 1;
-      const cw = Math.ceil(mxX - mnX) + cropPad * 2;
-      const ch = Math.ceil(mxY - mnY) + cropPad * 2;
-      const cx = mnX - vpR.left - cropPad;
-      const cy = mnY - vpR.top - cropPad;
-
-      const canvas = await html2canvas(vp, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        x: Math.max(0, cx),
-        y: Math.max(0, cy),
-        width: Math.ceil(cw),
-        height: Math.ceil(ch)
-      });
 
       main.style.overflow = savedOverflow.main;
       diagram.style.overflow = savedOverflow.diagram;
       this.zoom = sv.z; this.panX = sv.x; this.panY = sv.y;
       this.applyTransform();
 
+      const s = 2;
+      const cropPad = 1 * s;
+      const sx = Math.floor((mnX - vpR.left) * s) - cropPad;
+      const sy = Math.floor((mnY - vpR.top) * s) - cropPad;
+      const sw = Math.ceil((mxX - mnX) * s) + cropPad * 2;
+      const sh = Math.ceil((mxY - mnY) * s) + cropPad * 2;
+
+      const cropped = document.createElement('canvas');
+      cropped.width = Math.ceil(sw); cropped.height = Math.ceil(sh);
+      const ctx = cropped.getContext('2d');
+      ctx.drawImage(fullCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
       const link = document.createElement('a');
       link.download = 'sequence-diagram.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = cropped.toDataURL('image/png');
       link.click();
       this.toast('Image exported!');
     } catch (err) {
