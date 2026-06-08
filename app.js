@@ -581,13 +581,25 @@ class SeqDiagram {
       diagram.style.overflow = 'visible';
 
       const vp = diagram.querySelector('.diagram-viewport');
+      const { pad: p } = SeqDiagram.CFG;
+      let cw = 600;
+      if (this.lifelines.length > 0) {
+        let mn = Infinity, mx = -Infinity;
+        this.lifelines.forEach(l => { const x = this.lx.get(l.id); if (x != null) { mn = Math.min(mn, x); mx = Math.max(mx, x); } });
+        if (mn !== Infinity) cw = mx - mn + p.l + p.r;
+      }
+      const savedW = vp.style.width;
+      vp.style.width = cw + 'px';
+
       const canvas = await html2canvas(vp || diagram, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
-        logging: false
+        logging: false,
+        width: cw
       });
 
+      vp.style.width = savedW;
       diagram.style.overflow = '';
       this.zoom = sv.z; this.panX = sv.x; this.panY = sv.y;
       this.applyTransform();
