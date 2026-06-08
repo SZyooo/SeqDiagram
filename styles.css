@@ -442,6 +442,69 @@ main {
   box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
 }
 
+.msg-eph {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #6366f1;
+  border: 2px solid #fff;
+  cursor: ew-resize;
+  z-index: 20;
+  transform: translate(-50%, -50%);
+  opacity: 0.2;
+  transition: opacity .12s, transform .12s;
+  box-shadow: 0 1px 4px rgba(99,102,241,0.3);
+  pointer-events: auto;
+}
+
+.msg-eph:hover {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.35);
+}
+
+.msg-vgrip {
+  position: absolute;
+  cursor: ns-resize;
+  z-index: 20;
+  transform: translate(-50%, -50%);
+  opacity: 0.15;
+  transition: opacity .12s;
+  pointer-events: auto;
+  width: 14px; height: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.msg-vgrip::before,
+.msg-vgrip::after {
+  content: '';
+  display: block;
+  height: 2px;
+  background: #64748b;
+  border-radius: 1px;
+}
+
+.msg-vgrip:hover {
+  opacity: 1;
+}
+
+.msg-vgrip:hover::before,
+.msg-vgrip:hover::after {
+  background: #6366f1;
+}
+
+.msg-vindicator {
+  position: absolute;
+  height: 2px;
+  background: #6366f1;
+  display: block;
+  z-index: 15;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(99,102,241,0.4);
+}
+
 .btn.active {
   background: #6366f1 !important;
   color: #fff !important;

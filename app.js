@@ -584,6 +584,7 @@ class SeqDiagram {
     this.drawArrows(svg);
     this.drawHeaders(vp);
     this.drawLabels(vp);
+    this.drawMessageControls(vp);
   }
 
   calcLayout(cw) {
@@ -796,6 +797,121 @@ class SeqDiagram {
 
       container.appendChild(label);
     });
+  }
+
+  drawMessageControls(container) {
+    const { selfOff, selfH, pad } = SeqDiagram.CFG;
+    this.messages.forEach(m => {
+      const fromX = this.lx.get(m.fromId);
+      const toX = this.lx.get(m.toId);
+      if (fromX == null || toX == null) return;
+      const y = m._y;
+      const isSelf = m.fromId === m.toId;
+      const sx = fromX, sy = y;
+      const ex = isSelf ? fromX : toX;
+      const ey = isSelf ? y + selfH : y;
+
+      const sd = document.createElement('div');
+      sd.className = 'msg-eph'; sd.dataset.eph = m.id; sd.dataset.ep = 'from';
+      sd.style.cssText = `left:${sx}px;top:${sy}px;`;
+      sd.addEventListener('mousedown', e => this._epDrag(e, m.id, 'from'));
+      container.appendChild(sd);
+
+      const ed = document.createElement('div');
+      ed.className = 'msg-eph'; ed.dataset.eph = m.id; ed.dataset.ep = 'to';
+      ed.style.cssText = `left:${ex}px;top:${ey}px;`;
+      ed.addEventListener('mousedown', e => this._epDrag(e, m.id, 'to'));
+      container.appendChild(ed);
+
+      const grip = document.createElement('div');
+      grip.className = 'msg-vgrip'; grip.dataset.vgrip = m.id;
+      grip.style.cssText = `left:${(fromX + toX) / 2}px;top:${isSelf ? y + selfH / 2 : y}px;`;
+      grip.addEventListener('mousedown', e => this._vDrag(e, m.id));
+      container.appendChild(grip);
+    });
+  }
+
+  _epDrag(e, msgId, ep) {
+    e.stopPropagation(); e.preventDefault();
+    const dot = e.currentTarget;
+    const diagram = $('diagram');
+    const rect = diagram.getBoundingClientRect();
+
+    const onMove = ev => {
+      const dx = (ev.clientX - rect.left - this.panX) / this.zoom;
+      dot.style.left = dx + 'px';
+    };
+
+    const onUp = ev => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      const msg = this.messages.find(m => m.id === msgId);
+      if (!msg) return;
+      const mx = (ev.clientX - rect.left - this.panX) / this.zoom;
+      let nearest = null, minD = Infinity;
+      this.lifelines.forEach(l => {
+        const d = Math.abs(mx - this.lx.get(l.id));
+        if (d < minD) { minD = d; nearest = l.id; }
+      });
+      if (nearest) {
+        if (ep === 'from') msg.fromId = nearest;
+        else msg.toId = nearest;
+        this.saveToStorage();
+      }
+      this.render();
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  _vDrag(e, msgId) {
+    e.stopPropagation(); e.preventDefault();
+    const diagram = $('diagram');
+    const rect = diagram.getBoundingClientRect();
+    const msg = this.messages.find(m => m.id === msgId);
+    if (!msg) return;
+    const fromIdx = this.messages.indexOf(msg);
+    const startY = e.clientY;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'msg-vindicator';
+    diagram.querySelector('.diagram-viewport').appendChild(indicator);
+
+    const onMove = ev => {
+      const my = (ev.clientY - rect.top - this.panY) / this.zoom;
+      let slot = 0, minD = Infinity;
+      this.messages.forEach((m, i) => {
+        const d = Math.abs(my - m._y);
+        if (d < minD) { minD = d; slot = i; }
+      });
+      if (slot >= 0 && slot < this.messages.length) {
+        indicator.style.cssText = `position:absolute;left:${SeqDiagram.CFG.pad.l - 20}px;right:${SeqDiagram.CFG.pad.r}px;top:${this.messages[slot]._y}px;`;
+      }
+    };
+
+    const onUp = ev => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      indicator.remove();
+      if (Math.abs(ev.clientY - startY) > 6) {
+        const my = (ev.clientY - rect.top - this.panY) / this.zoom;
+        let slot = 0, minD = Infinity;
+        this.messages.forEach((m, i) => {
+          const d = Math.abs(my - m._y);
+          if (d < minD) { minD = d; slot = i; }
+        });
+        if (slot !== fromIdx) {
+          const [item] = this.messages.splice(fromIdx, 1);
+          this.messages.splice(fromIdx < slot ? slot - 1 : slot, 0, item);
+          this.saveToStorage();
+        }
+      }
+      this.render();
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   }
 
   toast(msg) {
