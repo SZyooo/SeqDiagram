@@ -156,6 +156,50 @@ class SeqDiagram {
     this.applyTransform();
   }
 
+  onHeaderMouseDown(e, id) {
+    if (e.button !== 0 || this.spaceDown) return;
+    const startX = e.clientX;
+    let moved = false;
+
+    const onMove = ev => {
+      if (!moved && (Math.abs(ev.clientX - startX) > 6)) {
+        moved = true;
+        document.body.style.cursor = 'grabbing';
+      }
+    };
+
+    const onUp = ev => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+
+      if (moved) {
+        const diagram = $('diagram');
+        const rect = diagram.getBoundingClientRect();
+        const mx = (ev.clientX - rect.left - this.panX) / this.zoom;
+
+        let targetIdx = 0;
+        let minDist = Infinity;
+        this.lifelines.forEach((ll, i) => {
+          const d = Math.abs(mx - this.lx.get(ll.id));
+          if (d < minDist) { minDist = d; targetIdx = i; }
+        });
+
+        const fromIdx = this.lifelines.findIndex(ll => ll.id === id);
+        if (fromIdx >= 0 && fromIdx !== targetIdx) {
+          const [item] = this.lifelines.splice(fromIdx, 1);
+          const adjust = fromIdx < targetIdx ? targetIdx - 1 : targetIdx;
+          this.lifelines.splice(adjust, 0, item);
+          this.saveToStorage();
+          this.render();
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
   onDiagramClick(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
@@ -513,30 +557,7 @@ class SeqDiagram {
       const box = document.createElement('div');
       box.className = 'header-box';
       box.textContent = l.name;
-      box.draggable = true;
-      box.dataset.id = l.id;
-      box.ondragstart = e => {
-        e.dataTransfer.setData('text/plain', l.id);
-        e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => box.style.opacity = '0.4', 0);
-      };
-      box.ondragend = () => { box.style.opacity = '1'; };
-      box.ondragover = e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
-      box.ondrop = e => {
-        e.preventDefault();
-        const fromId = e.dataTransfer.getData('text/plain');
-        const toId = l.id;
-        if (fromId && toId && fromId !== toId) {
-          const fromIdx = this.lifelines.findIndex(x => x.id === fromId);
-          const toIdx = this.lifelines.findIndex(x => x.id === toId);
-          if (fromIdx >= 0 && toIdx >= 0) {
-            const [item] = this.lifelines.splice(fromIdx, 1);
-            this.lifelines.splice(toIdx, 0, item);
-            this.saveToStorage();
-            this.render();
-          }
-        }
-      };
+      box.addEventListener('mousedown', e => this.onHeaderMouseDown(e, l.id));
       div.appendChild(box);
 
       const renameBtn = document.createElement('button');

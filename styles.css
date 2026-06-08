@@ -7,7 +7,9 @@ body {
   min-height: 100vh;
 }
 
-#app { max-width: 1200px; margin: 0 auto; padding: 16px; }
+#app { max-width: 100%; margin: 0 auto; padding: 12px; min-height: 100vh; display: flex; flex-direction: column; }
+
+html, body { height: 100%; }
 
 header {
   background: #fff;
@@ -74,11 +76,14 @@ main {
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   overflow: hidden;
+  flex: 1;
+  display: flex;
 }
 
 #diagram {
   position: relative;
-  min-height: 400px;
+  flex: 1;
+  min-height: 300px;
   overflow: hidden;
   cursor: default;
 }
