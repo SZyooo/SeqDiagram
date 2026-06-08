@@ -368,18 +368,68 @@ class SeqDiagram {
     this.nextId = 10;
   }
 
-  save() {
-    this.saveToStorage();
-    this.toast('Diagram saved!');
+  async save() {
+    const data = { lifelines: this.lifelines, messages: this.messages, nextId: this.nextId };
+    const json = JSON.stringify(data, null, 2);
+
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: 'sequence-diagram.json',
+          types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+        });
+        const w = await handle.createWritable();
+        await w.write(json);
+        await w.close();
+        this.toast('File saved!');
+        return;
+      } catch (e) { if (e.name === 'AbortError') return; }
+    }
+
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sequence-diagram.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    this.toast('File saved!');
   }
 
-  load() {
-    if (this.lifelines.length > 0 || this.messages.length > 0) {
-      if (!confirm('Load will replace your current diagram. Continue?')) return;
+  async load() {
+    let text;
+    if (window.showOpenFilePicker) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+        });
+        text = await (await handle.getFile()).text();
+      } catch (e) { if (e.name === 'AbortError') return; this.toast('Failed to open file.'); return; }
+    } else {
+      text = await new Promise((resolve, reject) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = () => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsText(input.files[0]);
+        };
+        input.click();
+      }).catch(() => null);
+      if (!text) return;
     }
-    this.loadFromStorage();
-    this.render();
-    this.toast('Diagram loaded.');
+    try {
+      const d = JSON.parse(text);
+      if (!d.lifelines) { this.toast('Invalid file format.'); return; }
+      this.lifelines = d.lifelines;
+      this.messages = d.messages || [];
+      this.nextId = d.nextId || 1;
+      this.saveToStorage();
+      this.render();
+      this.toast('Diagram loaded.');
+    } catch (_) { this.toast('Failed to parse file.'); }
   }
 
   clear() {
