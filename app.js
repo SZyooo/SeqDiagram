@@ -662,6 +662,7 @@ class SeqDiagram {
     vp.appendChild(svg);
 
     this.drawStems(svg);
+    this.drawHeaderText(svg);
     this.drawFragments(svg, vp);
     this.drawArrows(svg);
     this.drawHeaders(vp);
@@ -782,6 +783,37 @@ class SeqDiagram {
       line.setAttribute('stroke-width', '2');
       if (marks[i]) line.setAttribute('marker-end', marks[i]);
       svg.appendChild(line);
+    });
+  }
+
+  drawHeaderText(svg) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const { pad: p, hdrH } = SeqDiagram.CFG;
+    this.lifelines.forEach(l => {
+      const x = this.lx.get(l.id);
+      if (x == null) return;
+      const baseY = p.t + 14;
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', x);
+      t.setAttribute('y', baseY);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('fill', '#4338ca');
+      t.setAttribute('font-size', '13');
+      t.setAttribute('font-weight', '600');
+      t.setAttribute('style', 'pointer-events:none;user-select:none;');
+      t.textContent = l.name;
+      svg.appendChild(t);
+      if (l.attrs) {
+        const a = document.createElementNS(ns, 'text');
+        a.setAttribute('x', x);
+        a.setAttribute('y', baseY + 15);
+        a.setAttribute('text-anchor', 'middle');
+        a.setAttribute('fill', '#6366f1');
+        a.setAttribute('font-size', '10');
+        a.setAttribute('style', 'pointer-events:none;user-select:none;');
+        a.textContent = l.attrs;
+        svg.appendChild(a);
+      }
     });
   }
 
