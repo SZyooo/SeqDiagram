@@ -585,12 +585,18 @@ class SeqDiagram {
       main.style.overflow = 'visible';
       diagram.style.overflow = 'visible';
 
+      // Hide HTML headers so SVG-backed headers are not covered
+      const htmlHeaders = vp.querySelectorAll('.lifeline-header');
+      htmlHeaders.forEach(el => el.style.visibility = 'hidden');
+
       const fullCanvas = await html2canvas(vp, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         logging: false
       });
+
+      htmlHeaders.forEach(el => el.style.visibility = '');
 
       // Compute tight bounding box BEFORE restoring (need zoom=1 layout)
       const svgEl = vp.querySelector('svg');
@@ -788,14 +794,26 @@ class SeqDiagram {
 
   drawHeaderText(svg) {
     const ns = 'http://www.w3.org/2000/svg';
-    const { pad: p, hdrH } = SeqDiagram.CFG;
+    const { pad: p, hdrH, hdrW } = SeqDiagram.CFG;
     this.lifelines.forEach(l => {
       const x = this.lx.get(l.id);
       if (x == null) return;
-      const baseY = p.t + 14;
+      const hw = hdrW / 2;
+      const box = document.createElementNS(ns, 'rect');
+      box.setAttribute('x', x - hw);
+      box.setAttribute('y', p.t);
+      box.setAttribute('width', hdrW);
+      box.setAttribute('height', hdrH);
+      box.setAttribute('rx', '8');
+      box.setAttribute('fill', '#eef2ff');
+      box.setAttribute('stroke', '#6366f1');
+      box.setAttribute('stroke-width', '2');
+      box.setAttribute('style', 'pointer-events:none;');
+      svg.appendChild(box);
+
       const t = document.createElementNS(ns, 'text');
       t.setAttribute('x', x);
-      t.setAttribute('y', baseY);
+      t.setAttribute('y', p.t + 22);
       t.setAttribute('text-anchor', 'middle');
       t.setAttribute('fill', '#4338ca');
       t.setAttribute('font-size', '13');
@@ -806,7 +824,7 @@ class SeqDiagram {
       if (l.attrs) {
         const a = document.createElementNS(ns, 'text');
         a.setAttribute('x', x);
-        a.setAttribute('y', baseY + 15);
+        a.setAttribute('y', p.t + 35);
         a.setAttribute('text-anchor', 'middle');
         a.setAttribute('fill', '#6366f1');
         a.setAttribute('font-size', '10');
