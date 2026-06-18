@@ -52,6 +52,7 @@ class SeqDiagram {
     this.spaceDown = false;
     this.panStart = null;
     this._fileHandle = null;
+    this._fileName = '';
     this.note = '';
     this._initDB();
     this.init();
@@ -63,6 +64,7 @@ class SeqDiagram {
 
   init() {
     this.loadFromStorage();
+    this.updateFileLabel();
     this.bindEvents();
     this.setupViewportEvents();
     this.render();
@@ -437,7 +439,8 @@ class SeqDiagram {
       messages: this.messages,
       fragments: this.fragments,
       nextId: this.nextId,
-      note: this.note
+      note: this.note,
+      fileName: this._fileName
     }));
   }
 
@@ -452,10 +455,12 @@ class SeqDiagram {
           this.fragments = d.fragments || [];
           this.nextId = d.nextId || 1;
           this.note = d.note || '';
+          this._fileName = d.fileName || '';
           return;
         }
       }
     } catch (_) {}
+    this._fileName = '';
     this.setDefaultData();
   }
 
@@ -483,6 +488,8 @@ class SeqDiagram {
         const w = await this._fileHandle.createWritable();
         await w.write(json);
         await w.close();
+        this.updateFileLabel(this._fileHandle.name);
+        this.saveToStorage();
         this.toast('Saved!');
         return;
       } catch (_) { this._fileHandle = null; }
@@ -499,6 +506,8 @@ class SeqDiagram {
         const w = await h.createWritable();
         await w.write(json);
         await w.close();
+        this.updateFileLabel(h.name);
+        this.saveToStorage();
         this.toast('Saved!');
         return;
       } catch (e) { if (e.name === 'AbortError') return; }
@@ -511,11 +520,13 @@ class SeqDiagram {
     a.download = 'sequence-diagram.json';
     a.click();
     URL.revokeObjectURL(url);
+    this.updateFileLabel('sequence-diagram.json');
+    this.saveToStorage();
     this.toast('Saved!');
   }
 
   async load() {
-    let text;
+    let text, fileName;
     if (window.showOpenFilePicker) {
       try {
         const [handle] = await window.showOpenFilePicker({
@@ -523,6 +534,7 @@ class SeqDiagram {
           types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
         });
         text = await (await handle.getFile()).text();
+        fileName = handle.name;
       } catch (e) { if (e.name === 'AbortError') return; this.toast('Failed to open file.'); return; }
     } else {
       text = await new Promise((resolve, reject) => {
@@ -531,13 +543,15 @@ class SeqDiagram {
         input.accept = '.json';
         input.onchange = () => {
           const r = new FileReader();
-          r.onload = () => resolve(r.result);
+          r.onload = () => resolve({ text: r.result, name: input.files[0].name });
           r.onerror = reject;
           r.readAsText(input.files[0]);
         };
         input.click();
       }).catch(() => null);
       if (!text) return;
+      fileName = text.name;
+      text = text.text;
     }
     try {
       const d = JSON.parse(text);
@@ -546,6 +560,7 @@ class SeqDiagram {
       this.messages = d.messages || [];
       this.fragments = d.fragments || [];
       this.nextId = d.nextId || 1;
+      this.updateFileLabel(fileName);
       this.saveToStorage();
       this.render();
       this.toast('Diagram loaded.');
@@ -559,6 +574,9 @@ class SeqDiagram {
     this.messages = [];
     this.fragments = [];
     this.nextId = 1;
+    this._fileName = '';
+    this._fileHandle = null;
+    this.updateFileLabel();
     localStorage.removeItem('seqd');
     this.render();
     this.toast('Diagram cleared.');
@@ -1163,6 +1181,11 @@ class SeqDiagram {
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+  }
+
+  updateFileLabel(name) {
+    if (name) this._fileName = name;
+    $('file-label').textContent = this._fileName || 'Untitled';
   }
 
   toast(msg) {
