@@ -73,6 +73,7 @@ class SeqDiagram {
   bindEvents() {
     $('btn-lifeline').onclick = () => this.openModal('modal-lifeline');
     $('btn-message').onclick = () => this.openMessageModal();
+    $('btn-new').onclick = () => this.newDiagram();
     $('btn-save').onclick = () => this.save();
     $('btn-load').onclick = () => this.load();
     $('btn-export').onclick = () => this.exportPNG();
@@ -477,6 +478,20 @@ class SeqDiagram {
       { id: 'm4', fromId: 'l2', toId: 'l1', label: 'Response', params: 'data', type: 'response' }
     ];
     this.nextId = 10;
+  }
+
+  newDiagram() {
+    if (this.lifelines.length || this.messages.length) {
+      if (!confirm('Create a new diagram? Unsaved changes will be lost.')) return;
+    }
+    this._fileName = '';
+    this._fileHandle = null;
+    this.updateFileLabel();
+    localStorage.removeItem('seqd');
+    this.setDefaultData();
+    this.saveToStorage();
+    this.render();
+    this.toast('New diagram created.');
   }
 
   async save() {
@@ -1185,7 +1200,8 @@ class SeqDiagram {
 
   updateFileLabel(name) {
     if (name) this._fileName = name;
-    $('file-label').textContent = this._fileName || 'Untitled';
+    const el = $('file-label');
+    if (el) el.textContent = this._fileName || 'Untitled';
   }
 
   toast(msg) {
